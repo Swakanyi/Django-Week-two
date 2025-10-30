@@ -6,6 +6,7 @@ urlpatterns = [
     path('register/', views.register_page, name='register'),
     path('login/', views.login_page, name='login'),
     path('feed/', views.feed_page, name='feed'),
+    path('profile/', views.profile_page, name='profile'),
     path('logout/', views.logout, name='logout'),
 
 
@@ -15,6 +16,7 @@ urlpatterns = [
     
     
     path('profiles/me/', views.UserProfileView.as_view(), name='my-profile'),
+    path('profile/<str:username>/', views.user_profile_page, name='user-profile'),
     path('profiles/<int:pk>/', views.UserProfileDetailView.as_view(), name='profile-detail'),
     
    

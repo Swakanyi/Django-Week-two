@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User, UserProfile, Post, Comment, Like, Follow
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -19,7 +23,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
-# Add this new serializer for User objects in posts/comments
+
 class UserSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -68,7 +72,7 @@ class UserLoginSerializer(serializers.Serializer):
         return data
 
 class CommentSerializer(serializers.ModelSerializer):
-    user = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
+    user = UserSimpleSerializer(read_only=True)  
     
     class Meta:
         model = Comment
@@ -76,7 +80,7 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at']
 
 class PostSerializer(serializers.ModelSerializer):
-    user = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
+    user = UserSimpleSerializer(read_only=True)  
     comments = CommentSerializer(many=True, read_only=True)
     likes_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
@@ -93,7 +97,7 @@ class PostSerializer(serializers.ModelSerializer):
         return obj.comments.count()
 
 class LikeSerializer(serializers.ModelSerializer):
-    user = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
+    user = UserSimpleSerializer(read_only=True)  
     
     class Meta:
         model = Like
@@ -101,10 +105,60 @@ class LikeSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at']
 
 class FollowSerializer(serializers.ModelSerializer):
-    follower = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
-    following = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
+    follower = UserSimpleSerializer(read_only=True)  
+    following = UserSimpleSerializer(read_only=True)  
     
     class Meta:
         model = Follow
         fields = ['id', 'follower', 'following', 'created_at']
         read_only_fields = ['follower', 'created_at']
+
+
+class UserSearchSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username')
+    email = serializers.CharField(source='user.email')
+    bio = serializers.CharField(source='user.bio')
+    profile_picture = serializers.ImageField(source='user.profile_picture')
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserProfile
+        fields = ['id', 'username', 'email', 'bio', 'profile_picture', 'followers_count', 'following_count', 'is_following']
+    
+    def get_followers_count(self, obj):
+        return obj.followers_count
+    
+    def get_following_count(self, obj):
+        return obj.following_count
+    
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Follow.objects.filter(
+                follower=request.user, 
+                following=obj.user
+            ).exists()
+        return False
+    
+
+class FollowUserView(APIView):
+    def post(self, request, user_id):
+        user_to_follow = get_object_or_404(User, id=user_id)
+        follow, created = Follow.objects.get_or_create(
+            follower=request.user, 
+            following=user_to_follow
+        )
+        
+        if created:
+            return Response({'message': f'Now following {user_to_follow.username}'})
+        return Response({'message': f'Already following {user_to_follow.username}'})
+    
+    def delete(self, request, user_id):
+        user_to_unfollow = get_object_or_404(User, id=user_id)
+        Follow.objects.filter(
+            follower=request.user, 
+            following=user_to_unfollow
+        ).delete()
+        return Response({'message': f'Unfollowed {user_to_unfollow.username}'})

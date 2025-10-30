@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <!-- Navigation -->
+
     <nav class="bg-white shadow-sm border-b">
         <div class="max-w-4xl mx-auto px-4 py-3">
             <div class="flex justify-between items-center">
@@ -14,9 +14,22 @@
                     <i class="fas fa-infinity text-blue-600 text-2xl"></i>
                     <span class="text-xl font-bold text-gray-800">Loop</span>
                 </div>
+
+                <div class="flex-1 max-w-md mx-4">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        placeholder="Search users..." 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                </div>
+            </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-gray-600">Welcome, <span id="username" class="font-semibold text-blue-600"></span>!</span>
                     <a href="/" class="text-gray-600 hover:text-blue-600 transition">Home</a>
+                    <a href="/profile/" class="text-gray-600 hover:text-blue-600 transition">Profile</a>
                     <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded-lg text-sm transition">Logout</button>
                 </div>
             </div>
@@ -24,46 +37,43 @@
     </nav>
 
     <div class="max-w-2xl mx-auto px-4 py-8">
-        <!-- Create Post Card -->
-        <!-- Update the Create Post Card section -->
-<div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">Create Post</h3>
-    <form id="postForm" class="space-y-4">
-        <textarea 
-            id="content" 
-            placeholder="What's on your mind?" 
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            rows="3"
-        ></textarea>
         
-        <!-- Image Preview -->
-        <div id="imagePreview" class="hidden">
-            <img id="preview" class="max-h-64 rounded-lg mx-auto">
-            <button type="button" onclick="removeImage()" class="mt-2 text-red-500 hover:text-red-700">
-                <i class="fas fa-times mr-1"></i>Remove Image
-            </button>
+        <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Create Post</h3>
+            <form id="postForm" class="space-y-4">
+                <textarea 
+                    id="content" 
+                    placeholder="What's on your mind?" 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows="3"
+                ></textarea>
+                
+                <div id="imagePreview" class="hidden">
+                    <img id="preview" class="max-h-64 rounded-lg mx-auto">
+                    <button type="button" onclick="removeImage()" class="mt-2 text-red-500 hover:text-red-700">
+                        <i class="fas fa-times mr-1"></i>Remove Image
+                    </button>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="flex space-x-2 text-gray-500">
+                        <label for="imageUpload" class="cursor-pointer hover:text-blue-600 transition">
+                            <i class="far fa-image"></i>
+                            <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="previewImage(this)">
+                        </label>
+                        <button type="button" class="hover:text-blue-600 transition">
+                            <i class="far fa-smile"></i>
+                        </button>
+                    </div>
+                    <button 
+                        type="submit" 
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                        Post
+                    </button>
+                </div>
+            </form>
         </div>
-        
-        <div class="flex justify-between items-center">
-            <div class="flex space-x-2 text-gray-500">
-                <!-- Image Upload Button -->
-                <label for="imageUpload" class="cursor-pointer hover:text-blue-600 transition">
-                    <i class="far fa-image"></i>
-                    <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="previewImage(this)">
-                </label>
-                <button type="button" class="hover:text-blue-600 transition">
-                    <i class="far fa-smile"></i>
-                </button>
-            </div>
-            <button 
-                type="submit" 
-                class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
-            >
-                Post
-            </button>
-        </div>
-    </form>
-</div>
 
         <!-- Posts Feed -->
         <div class="space-y-6">
@@ -72,6 +82,13 @@
                 <!-- Posts will be loaded here -->
             </div>
         </div>
+
+        <div id="searchResults" class="space-y-6 hidden">
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Search Results</h3>
+    <div id="searchResultsContent" class="space-y-4">
+        <!-- Search results will be loaded here -->
+    </div>
+</div>
     </div>
 
     <script>
@@ -79,19 +96,38 @@
         const username = localStorage.getItem("username") || "Guest";
         document.getElementById("username").innerText = username;
 
-        // Check if user is logged in
-        if (!localStorage.getItem("username")) {
-            window.location.href = "/login/";
+        // Single authentication check
+        async function checkAuth() {
+            console.log('Checking authentication...');
+            try {
+                const res = await fetch("/posts/", {
+                    credentials: 'include',
+                    method: "HEAD"
+                });
+                
+                console.log('Auth check status:', res.status);
+                
+                if (res.status === 401 || res.status === 403) {
+                    console.log('Not authenticated, redirecting to login');
+                    window.location.href = "/login/";
+                    return false;
+                }
+                console.log('Authentication successful');
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = "/login/";
+                return false;
+            }
         }
 
-        // Load posts with authentication
+        
         async function loadPosts() {
             try {
                 const res = await fetch("/posts/", {
-                    credentials: 'include'  // This sends session cookies
+                    credentials: 'include'
                 });
                 
-                // Check if user is not authenticated
                 if (res.status === 401 || res.status === 403) {
                     localStorage.removeItem("username");
                     window.location.href = "/login/";
@@ -118,224 +154,222 @@
                 }
 
                 posts.forEach(post => {
-    const postDate = new Date(post.created_at).toLocaleDateString();
-    const postElement = `
-        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        ${post.user.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">${post.user.username}</h4>
-                        <p class="text-sm text-gray-500">${postDate}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <p class="text-gray-700 mb-4 leading-relaxed">${post.content}</p>
-            
-            ${post.image ? `
-                <img src="${post.image}" alt="Post image" class="rounded-lg mb-4 w-full max-h-96 object-cover">
-            ` : ''}
-            
-            <!-- Stats and Actions -->
-            <div class="flex items-center justify-between pt-4 border-t">
-                <div class="flex items-center space-x-6 text-gray-500">
-                    <button onclick="likePost(${post.id})" class="flex items-center space-x-2 hover:text-red-500 transition">
-                        <i class="far fa-heart"></i>
-                        <span>${post.likes_count}</span>
-                    </button>
-                    <button onclick="toggleComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-500 transition">
-                        <i class="far fa-comment"></i>
-                        <span>${post.comments_count}</span>
-                    </button>
-                </div>
-                <button class="text-gray-400 hover:text-gray-600 transition">
-                    <i class="far fa-bookmark"></i>
-                </button>
-            </div>
+                    const postDate = new Date(post.created_at).toLocaleDateString();
+                    const postElement = `
+                        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow" data-post-id="${post.id}">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                        ${post.user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-800">${post.user.username}</h4>
+                                        <p class="text-sm text-gray-500">${postDate}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Edit/Delete buttons -->
+                                ${post.user.username === username ? `
+                                    <div class="flex space-x-2">
+                                        <button onclick="editPost(${post.id})" class="text-blue-500 hover:text-blue-700 transition" title="Edit post">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deletePost(${post.id})" class="text-red-500 hover:text-red-700 transition" title="Delete post">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <!-- Post Content -->
+                            <div class="post-content">
+                                <p class="text-gray-700 mb-4 leading-relaxed">${post.content}</p>
+                                
+                                ${post.image ? `
+                                    <img src="${post.image}" alt="Post image" class="rounded-lg mb-4 w-full max-h-96 object-cover">
+                                ` : ''}
+                            </div>
+                            
+                            <!-- Edit Form Container (initially empty) -->
+                            <div class="edit-form-container"></div>
+                            
+                            <!-- Stats and Actions -->
+                            <div class="flex items-center justify-between pt-4 border-t">
+                                <div class="flex items-center space-x-6 text-gray-500">
+                                    <button onclick="likePost(${post.id})" class="flex items-center space-x-2 hover:text-red-500 transition">
+                                        <i class="far fa-heart"></i>
+                                        <span>${post.likes_count}</span>
+                                    </button>
+                                    <button onclick="toggleComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-500 transition">
+                                        <i class="far fa-comment"></i>
+                                        <span>${post.comments_count}</span>
+                                    </button>
+                                </div>
+                            </div>
 
-            <!-- Comments Section (initially hidden) -->
-            <div id="comments-${post.id}" class="mt-4 hidden">
-                <div class="space-y-3 mb-4" id="comments-list-${post.id}">
-                    <!-- Comments will be loaded here -->
-                </div>
-                
-                <!-- Add Comment Form -->
-                <form class="comment-form" data-post-id="${post.id}">
-                    <div class="flex space-x-2">
-                        <input 
-                            type="text" 
-                            placeholder="Write a comment..." 
-                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                        >
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
-                            Post
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    container.innerHTML += postElement;
-    
-    // Load comments for this post
-    loadComments(post.id);
-});
+                            <!-- Comments Section -->
+                            <div id="comments-${post.id}" class="mt-4 hidden">
+                                <div class="space-y-3 mb-4" id="comments-list-${post.id}"></div>
+                                <form class="comment-form" data-post-id="${post.id}">
+                                    <div class="flex space-x-2">
+                                        <input type="text" placeholder="Write a comment..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">Post</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += postElement;
+                    loadComments(post.id);
+                });
+
             } catch (error) {
                 console.error('Error loading posts:', error);
-                // If there's an error, check if it's authentication related
                 localStorage.removeItem("username");
                 window.location.href = "/login/";
             }
         }
 
-        // Create new post with authentication
-        // Update the post creation to handle images
-document.getElementById("postForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const content = document.getElementById("content").value.trim();
-    
-    // Allow posts with either content OR image (or both)
-    if (!content && !selectedImage) {
-        alert("Please add some content or an image");
-        return;
-    }
-
-    try {
-        const formData = new FormData();
         
-        // Always send content, even if empty when image is present
-        formData.append('content', content || '');
-        
-        if (selectedImage) {
-            formData.append('image', selectedImage);
-        }
-
-        const res = await fetch("/posts/", {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": getCookie('csrftoken')
-            },
-            credentials: 'include',
-            body: formData
-        });
-
-        if (res.status === 401 || res.status === 403) {
-            localStorage.removeItem("username");
-            window.location.href = "/login/";
-            return;
-        }
-
-        if (res.ok) {
-            document.getElementById("content").value = "";
-            removeImage(); // Reset image
-            loadPosts();
-        } else {
-            const error = await res.json();
-            alert("Failed to post: " + JSON.stringify(error));
-        }
-    } catch (error) {
-        console.error('Error creating post:', error);
-        alert("Failed to post");
-    }
-});
-
-        // Toggle comments visibility
-function toggleComments(postId) {
-    const commentsSection = document.getElementById(`comments-${postId}`);
-    commentsSection.classList.toggle('hidden');
-    
-    if (!commentsSection.classList.contains('hidden')) {
-        loadComments(postId);
-    }
-}
-
-// Load comments for a post
-async function loadComments(postId) {
-    try {
-        const res = await fetch(`/posts/${postId}/comments/`, {
-            credentials: 'include'
-        });
-        
-        if (res.ok) {
-            const comments = await res.json();
-            const container = document.getElementById(`comments-list-${postId}`);
-            container.innerHTML = '';
+        document.getElementById("postForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const content = document.getElementById("content").value.trim();
             
-            if (comments.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-sm">No comments yet</p>';
+            if (!content && !selectedImage) {
+                alert("Please add some content or an image");
                 return;
             }
-            
-            comments.forEach(comment => {
-                const commentDate = new Date(comment.created_at).toLocaleDateString();
-                const commentElement = `
-                    <div class="flex items-start space-x-3">
-                        <div class="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                            ${comment.user.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="flex-1">
-                            <div class="bg-gray-100 rounded-lg px-4 py-2">
-                                <div class="flex items-center space-x-2">
-                                    <span class="font-semibold text-sm">${comment.user.username}</span>
-                                    <span class="text-xs text-gray-500">${commentDate}</span>
-                                </div>
-                                <p class="text-gray-700 mt-1">${comment.content}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += commentElement;
-            });
-        }
-    } catch (error) {
-        console.error('Error loading comments:', error);
-    }
-}
 
-// Add comment function
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.comment-form')) {
-        e.preventDefault();
-        const form = e.target.closest('.comment-form');
-        const postId = form.getAttribute('data-post-id');
-        const input = form.querySelector('input[type="text"]');
-        const content = input.value.trim();
-        
-        if (content) {
-            addComment(postId, content);
-            input.value = '';
-        }
-    }
-});
+            try {
+                const formData = new FormData();
+                formData.append('content', content || '');
+                
+                if (selectedImage) {
+                    formData.append('image', selectedImage);
+                }
 
-async function addComment(postId, content) {
-    try {
-        const res = await fetch(`/posts/${postId}/comments/`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie('csrftoken')
-            },
-            credentials: 'include',
-            body: JSON.stringify({ content: content })
+                const res = await fetch("/posts/", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    credentials: 'include',
+                    body: formData
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    localStorage.removeItem("username");
+                    window.location.href = "/login/";
+                    return;
+                }
+
+                if (res.ok) {
+                    document.getElementById("content").value = "";
+                    removeImage();
+                    loadPosts();
+                } else {
+                    const error = await res.json();
+                    alert("Failed to post: " + JSON.stringify(error));
+                }
+            } catch (error) {
+                console.error('Error creating post:', error);
+                alert("Failed to post");
+            }
         });
 
-        if (res.ok) {
-            loadComments(postId); // Reload comments for this post
-            loadPosts(); // Also reload posts to update comment count
-        } else {
-            alert("Failed to add comment");
+        
+        function toggleComments(postId) {
+            const commentsSection = document.getElementById(`comments-${postId}`);
+            commentsSection.classList.toggle('hidden');
+            
+            if (!commentsSection.classList.contains('hidden')) {
+                loadComments(postId);
+            }
         }
-    } catch (error) {
-        console.error('Error adding comment:', error);
-    }
-}
 
-        // Like post function with authentication
+       
+        async function loadComments(postId) {
+            try {
+                const res = await fetch(`/posts/${postId}/comments/`, {
+                    credentials: 'include'
+                });
+                
+                if (res.ok) {
+                    const comments = await res.json();
+                    const container = document.getElementById(`comments-list-${postId}`);
+                    container.innerHTML = '';
+                    
+                    if (comments.length === 0) {
+                        container.innerHTML = '<p class="text-gray-500 text-sm">No comments yet</p>';
+                        return;
+                    }
+                    
+                    comments.forEach(comment => {
+                        const commentDate = new Date(comment.created_at).toLocaleDateString();
+                        const commentElement = `
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                    ${comment.user.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="bg-gray-100 rounded-lg px-4 py-2">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="font-semibold text-sm">${comment.user.username}</span>
+                                            <span class="text-xs text-gray-500">${commentDate}</span>
+                                        </div>
+                                        <p class="text-gray-700 mt-1">${comment.content}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML += commentElement;
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading comments:', error);
+            }
+        }
+
+        
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.comment-form')) {
+                e.preventDefault();
+                const form = e.target.closest('.comment-form');
+                const postId = form.getAttribute('data-post-id');
+                const input = form.querySelector('input[type="text"]');
+                const content = input.value.trim();
+                
+                if (content) {
+                    addComment(postId, content);
+                    input.value = '';
+                }
+            }
+        });
+
+        async function addComment(postId, content) {
+            try {
+                const res = await fetch(`/posts/${postId}/comments/`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ content: content })
+                });
+
+                if (res.ok) {
+                    loadComments(postId);
+                    loadPosts();
+                } else {
+                    alert("Failed to add comment");
+                }
+            } catch (error) {
+                console.error('Error adding comment:', error);
+            }
+        }
+
+        
         async function likePost(postId) {
             try {
                 const res = await fetch(`/posts/${postId}/like/`, {
@@ -354,14 +388,14 @@ async function addComment(postId, content) {
                 }
                 
                 if (res.ok) {
-                    loadPosts(); // Reload to update like count
+                    loadPosts();
                 }
             } catch (error) {
                 console.error('Error liking post:', error);
             }
         }
 
-        // Get CSRF token from cookies
+        
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -379,74 +413,28 @@ async function addComment(postId, content) {
 
         let selectedImage = null;
 
-// Preview selected image
-function previewImage(input) {
-    const file = input.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            selectedImage = file;
-            document.getElementById('preview').src = e.target.result;
-            document.getElementById('imagePreview').classList.remove('hidden');
-        }
-        reader.readAsDataURL(file);
-    }
-}
-
-// Remove selected image
-function removeImage() {
-    selectedImage = null;
-    document.getElementById('imageUpload').value = '';
-    document.getElementById('imagePreview').classList.add('hidden');
-}
-
-// Update the post creation to handle images
-document.getElementById("postForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const content = document.getElementById("content").value.trim();
-    
-    if (!content && !selectedImage) {
-        alert("Please add some content or an image");
-        return;
-    }
-
-    try {
-        const formData = new FormData();
-        formData.append('content', content);
-        if (selectedImage) {
-            formData.append('image', selectedImage);
+        
+        function previewImage(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedImage = file;
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
         }
 
-        const res = await fetch("/posts/", {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": getCookie('csrftoken')
-            },
-            credentials: 'include',
-            body: formData  // Use FormData instead of JSON
-        });
-
-        if (res.status === 401 || res.status === 403) {
-            localStorage.removeItem("username");
-            window.location.href = "/login/";
-            return;
+        
+        function removeImage() {
+            selectedImage = null;
+            document.getElementById('imageUpload').value = '';
+            document.getElementById('imagePreview').classList.add('hidden');
         }
 
-        if (res.ok) {
-            document.getElementById("content").value = "";
-            removeImage(); // Reset image
-            loadPosts();
-        } else {
-            const error = await res.json();
-            alert("Failed to post: " + JSON.stringify(error));
-        }
-    } catch (error) {
-        console.error('Error creating post:', error);
-        alert("Failed to post");
-    }
-});
-
-        // Logout function
+      
         async function logout() {
             try {
                 await fetch("/auth/logout/", {
@@ -464,8 +452,242 @@ document.getElementById("postForm").addEventListener("submit", async (e) => {
             }
         }
 
-        // Load posts when page loads
-        loadPosts();
+        
+        function editPost(postId) {
+            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+            const content = postElement.querySelector('.post-content').textContent;
+            
+            const editForm = `
+                <div class="edit-form bg-gray-50 p-4 rounded-lg mt-3">
+                    <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2" rows="3">${content}</textarea>
+                    <div class="flex space-x-2">
+                        <button onclick="savePost(${postId})" class="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded transition">
+                            Save
+                        </button>
+                        <button onclick="cancelEdit(${postId})" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1 rounded transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            postElement.querySelector('.post-content').classList.add('hidden');
+            postElement.querySelector('.edit-form-container').innerHTML = editForm;
+        }
+
+       
+        async function savePost(postId) {
+            const editForm = document.querySelector(`[data-post-id="${postId}"] .edit-form`);
+            const newContent = editForm.querySelector('textarea').value.trim();
+            
+            if (!newContent) {
+                alert('Post content cannot be empty');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/posts/${postId}/`, {
+                    method: "PUT",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ content: newContent })
+                });
+
+                if (res.ok) {
+                    loadPosts();
+                } else {
+                    alert("Failed to update post");
+                }
+            } catch (error) {
+                console.error('Error updating post:', error);
+                alert("Failed to update post");
+            }
+        }
+
+        
+        function cancelEdit(postId) {
+            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+            postElement.querySelector('.post-content').classList.remove('hidden');
+            postElement.querySelector('.edit-form-container').innerHTML = '';
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('Are you sure you want to delete this post?')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/posts/${postId}/`, {
+                    method: "DELETE",
+                    headers: {
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    credentials: 'include'
+                });
+
+                if (res.ok) {
+                    loadPosts();
+                } else {
+                    alert("Failed to delete post");
+                }
+            } catch (error) {
+                console.error('Error deleting post:', error);
+                alert("Failed to delete post");
+            }
+        }
+
+        
+        checkAuth().then(isAuthenticated => {
+            console.log('Auth result:', isAuthenticated);
+            if (isAuthenticated) {
+                console.log('Loading posts...');
+                loadPosts();
+            }
+        });
+
+        
+let searchTimeout;
+
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const query = e.target.value.trim();
+    
+    
+    clearTimeout(searchTimeout);
+    
+    if (query.length > 2) {
+        
+        searchTimeout = setTimeout(() => {
+            searchUsers(query);
+        }, 500);
+    } else if (query.length === 0) {
+        
+        document.getElementById('searchResults').classList.add('hidden');
+        document.getElementById('posts').classList.remove('hidden');
+    }
+});
+
+
+async function searchUsers(query) {
+    try {
+        const res = await fetch(`/search/users/?query=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+        });
+        
+        if (res.ok) {
+            const users = await res.json();
+            displaySearchResults(users, query);
+        }
+    } catch (error) {
+        console.error('Error searching users:', error);
+    }
+}
+
+
+function displaySearchResults(users, query) {
+    const resultsContainer = document.getElementById('searchResultsContent');
+    const searchResultsSection = document.getElementById('searchResults');
+    const postsSection = document.getElementById('posts');
+    
+    postsSection.classList.add('hidden');
+    searchResultsSection.classList.remove('hidden');
+    
+    if (users.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="bg-white rounded-lg border p-8 text-center">
+                <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-semibold text-gray-600 mb-2">No users found</h3>
+                <p class="text-gray-500">No users match "${query}"</p>
+            </div>
+        `;
+        return;
+    }
+    
+    resultsContainer.innerHTML = '';
+    
+    users.forEach(user => {
+        const followButton = user.is_following ? 
+            `<button onclick="unfollowUser(${user.id})" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition">Unfollow</button>` :
+            `<button onclick="followUser(${user.id})" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition">Follow</button>`;
+        
+        const userElement = `
+            <div class="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">${user.username}</h4>
+                            <p class="text-sm text-gray-500">${user.email}</p>
+                            ${user.bio ? `<p class="text-sm text-gray-600 mt-1">${user.bio}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="viewProfile('${user.username}')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                            View Profile
+                        </button>
+                        ${followButton}
+                    </div>
+                </div>
+                <div class="flex space-x-6 mt-3 text-sm text-gray-500">
+                    <span><strong>${user.followers_count || 0}</strong> followers</span>
+                    <span><strong>${user.following_count || 0}</strong> following</span>
+                </div>
+            </div>
+        `;
+        resultsContainer.innerHTML += userElement;
+    });
+}
+
+
+function viewProfile(username) {
+    window.location.href = `/profile/${username}/`;
+}
+
+
+async function followUser(userId) {
+    try {
+        const res = await fetch(`/users/${userId}/follow/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCookie('csrftoken')
+            },
+            credentials: 'include'
+        });
+
+        if (res.ok) {
+            alert('User followed successfully!');
+            
+            const query = document.getElementById('searchInput').value;
+            if (query) {
+                searchUsers(query);
+            }
+        } else {
+            alert('Failed to follow user');
+        }
+    } catch (error) {
+        console.error('Error following user:', error);
+        alert('Failed to follow user');
+    }
+}
+
+
+document.addEventListener('click', function(e) {
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        if (document.getElementById('searchInput').value === '') {
+            searchResults.classList.add('hidden');
+            document.getElementById('posts').classList.remove('hidden');
+        }
+    }
+});
+
     </script>
 </body>
 </html>

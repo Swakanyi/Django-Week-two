@@ -1,14 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}Home{% endblock %}
+
+{% block title %}Home - Loop{% endblock %}
+
 {% block content %}
 <div class="text-center">
-  <h1>Welcome to Loop</h1>
-  <p>A simple social platform built with Django REST Framework.</p>
-  {% if not user.is_authenticated %}
-    <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
-    <a href="{% url 'register' %}" class="btn btn-outline-secondary">Register</a>
-  {% else %}
-    <a href="{% url 'feed' %}" class="btn btn-success">Go to Feed</a>
-  {% endif %}
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome to Loop! </h1>
+        <p class="text-lg text-gray-600 mb-8">Connect with friends and share your moments</p>
+        
+        {% if not user.is_authenticated %}
+            <div class="space-x-4">
+                <a href="{% url 'login' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold transition">Login</a>
+                <a href="{% url 'register' %}" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition">Register</a>
+            </div>
+        {% else %}
+            <div class="space-x-4">
+                <a href="{% url 'feed' %}" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold transition">Go to Feed</a>
+            </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

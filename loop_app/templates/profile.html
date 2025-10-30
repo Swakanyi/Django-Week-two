@@ -1,11 +1,300 @@
 {% extends 'base.html' %}
-{% block title %}Profile{% endblock %}
+
+{% block title %}Profile - Loop{% endblock %}
+
 {% block content %}
-<h2>My Profile</h2>
-<div class="card p-3">
-  <h4>{{ user.username }}</h4>
-  <p>Email: {{ user.email }}</p>
-  <p>Bio: {{ user.user_profile.bio }}</p>
-  <p>Website: {{ user.user_profile.website }}</p>
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+        
+        <div class="text-center mb-6">
+            <div class="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4">
+                {{ user.username.0|upper }}
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">{{ user.username }}</h1>
+            <p class="text-gray-600">{{ user.email }}</p>
+        </div>
+
+        <!-- Profile Details -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-700 mb-3">Stats</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Posts</span>
+                        <span class="font-semibold">{{ user.posts.count }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Followers</span>
+                        <span class="font-semibold">{{ user.user_profile.followers.count }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Following</span>
+                        <span class="font-semibold">{{ user.user_profile.following.count }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Info -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-700 mb-3">Profile Info</h3>
+                <div class="space-y-2">
+                    <div>
+                        <span class="text-gray-600">Bio:</span>
+                        <p id="bio-text" class="font-medium">{{ user.bio|default:"No bio yet" }}</p>
+                        <input type="text" id="bio-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg hidden" value="{{ user.bio|default:'' }}" placeholder="Add a bio...">
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Location:</span>
+                        <p id="location-text" class="font-medium">{{ user.location|default:"Not specified" }}</p>
+                        <input type="text" id="location-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg hidden" value="{{ user.location|default:'' }}" placeholder="Add your location...">
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Find me on:</span>
+                        <p id="website-text" class="font-medium">
+                            {% if user.website %}
+                                <a href="{{ user.website }}" target="_blank" class="text-blue-600 hover:underline">{{ user.website }}</a>
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </p>
+                        <input type="url" id="website-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg hidden" value="{{ user.website|default:'' }}" placeholder="https://example.com">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       
+        <div class="text-center space-x-4">
+            <button onclick="toggleEditMode()" id="edit-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition">
+                Edit Profile
+            </button>
+            <button onclick="saveProfile()" id="save-btn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition hidden">
+                Save Changes
+            </button>
+            <button onclick="cancelEdit()" id="cancel-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition hidden">
+                Cancel
+            </button>
+        </div>
+
+        <!-- Message Display -->
+        <div id="message" class="mt-4 text-center text-sm"></div>
+    </div>
+
+    <!-- User's Posts -->
+    <div class="mt-8">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">My Posts</h2>
+        <div id="userPosts" class="space-y-4">
+            <!-- Posts will be loaded here -->
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let isEditMode = false;
+    let originalData = {};
+
+    
+    async function loadUserPosts() {
+        try {
+            const res = await fetch("/posts/", {
+                credentials: 'include'
+            });
+            
+            if (res.ok) {
+                const posts = await res.json();
+                const container = document.getElementById("userPosts");
+                container.innerHTML = '';
+
+                
+                const userPosts = posts.filter(post => post.user.username === "{{ user.username }}");
+                
+                if (userPosts.length === 0) {
+                    container.innerHTML = `
+                        <div class="bg-white rounded-lg border p-6 text-center">
+                            <i class="fas fa-feather text-4xl text-gray-300 mb-3"></i>
+                            <h3 class="text-lg font-semibold text-gray-600">No posts yet</h3>
+                            <p class="text-gray-500">Share your first post!</p>
+                            <a href="/feed/" class="inline-block mt-3 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+                                Create Post
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                userPosts.forEach(post => {
+                    const postDate = new Date(post.created_at).toLocaleDateString();
+                    const postElement = `
+                        <div class="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                        ${post.user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span class="font-semibold text-gray-800">${post.user.username}</span>
+                                </div>
+                                <span class="text-sm text-gray-500">${postDate}</span>
+                            </div>
+                            
+                            <p class="text-gray-700 mb-3">${post.content}</p>
+                            
+                            ${post.image ? `
+                                <img src="${post.image}" alt="Post image" class="rounded-lg mb-3 w-full max-h-64 object-cover">
+                            ` : ''}
+                            
+                            <div class="flex items-center space-x-4 text-gray-500 text-sm">
+                                <div class="flex items-center space-x-1">
+                                    <i class="far fa-heart"></i>
+                                    <span>${post.likes_count}</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <i class="far fa-comment"></i>
+                                    <span>${post.comments_count}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += postElement;
+                });
+            }
+        } catch (error) {
+            console.error('Error loading user posts:', error);
+        }
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        
+        if (isEditMode) {
+            
+            originalData = {
+                bio: document.getElementById('bio-input').value,
+                location: document.getElementById('location-input').value,
+                website: document.getElementById('website-input').value
+            };
+            
+           
+            document.getElementById('bio-text').classList.add('hidden');
+            document.getElementById('bio-input').classList.remove('hidden');
+            document.getElementById('location-text').classList.add('hidden');
+            document.getElementById('location-input').classList.remove('hidden');
+            document.getElementById('website-text').classList.add('hidden');
+            document.getElementById('website-input').classList.remove('hidden');
+            
+            
+            document.getElementById('edit-btn').classList.add('hidden');
+            document.getElementById('save-btn').classList.remove('hidden');
+            document.getElementById('cancel-btn').classList.remove('hidden');
+        } else {
+           
+            cancelEdit();
+        }
+    }
+
+  
+    async function saveProfile() {
+        const updatedData = {
+            bio: document.getElementById('bio-input').value,
+            location: document.getElementById('location-input').value,
+            website: document.getElementById('website-input').value
+        };
+
+        try {
+            const res = await fetch("/profiles/me/", {
+                method: "PUT",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                credentials: 'include',
+                body: JSON.stringify(updatedData)
+            });
+
+            const messageEl = document.getElementById("message");
+            
+            if (res.ok) {
+                messageEl.className = "text-center text-sm text-green-600 font-semibold";
+                messageEl.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Profile updated successfully!';
+                
+                
+                document.getElementById('bio-text').textContent = updatedData.bio || "No bio yet";
+                document.getElementById('location-text').textContent = updatedData.location || "Not specified";
+                
+                if (updatedData.website) {
+                    document.getElementById('website-text').innerHTML = `<a href="${updatedData.website}" target="_blank" class="text-blue-600 hover:underline">${updatedData.website}</a>`;
+                } else {
+                    document.getElementById('website-text').textContent = "Not specified";
+                }
+                
+                
+                exitEditMode();
+                
+                
+                setTimeout(() => {
+                    messageEl.innerHTML = '';
+                }, 2000);
+                
+            } else {
+                const error = await res.json();
+                messageEl.className = "text-center text-sm text-red-600 font-semibold";
+                messageEl.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>' + JSON.stringify(error);
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            const messageEl = document.getElementById("message");
+            messageEl.className = "text-center text-sm text-red-600 font-semibold";
+            messageEl.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to update profile';
+        }
+    }
+
+    
+    function cancelEdit() {
+        
+        document.getElementById('bio-input').value = originalData.bio;
+        document.getElementById('location-input').value = originalData.location;
+        document.getElementById('website-input').value = originalData.website;
+        
+        exitEditMode();
+    }
+
+   
+    function exitEditMode() {
+        isEditMode = false;
+        
+        
+        document.getElementById('bio-text').classList.remove('hidden');
+        document.getElementById('bio-input').classList.add('hidden');
+        document.getElementById('location-text').classList.remove('hidden');
+        document.getElementById('location-input').classList.add('hidden');
+        document.getElementById('website-text').classList.remove('hidden');
+        document.getElementById('website-input').classList.add('hidden');
+        
+       
+        document.getElementById('edit-btn').classList.remove('hidden');
+        document.getElementById('save-btn').classList.add('hidden');
+        document.getElementById('cancel-btn').classList.add('hidden');
+    }
+
+   
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    
+    loadUserPosts();
+</script>
 {% endblock %}

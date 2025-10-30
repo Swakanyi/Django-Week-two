@@ -3,9 +3,15 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('auth/register/', views.UserRegistrationView.as_view(), name='register'),
-    path('login/', views.UserLoginView.as_view(), name='login'),
-    path('auth/logout/', views.UserLogoutView.as_view(), name='logout'),
+    path('register/', views.register_page, name='register'),
+    path('login/', views.login_page, name='login'),
+    path('feed/', views.feed_page, name='feed'),
+    path('logout/', views.logout, name='logout'),
+
+
+    path('auth/register/', views.UserRegistrationView.as_view(), name='api-register'),
+    path('auth/login/', views.UserLoginView.as_view(), name='api-login'),
+    path('auth/logout/', views.UserLogoutView.as_view(), name='api-logout'),
     
     
     path('profiles/me/', views.UserProfileView.as_view(), name='my-profile'),
@@ -25,5 +31,5 @@ urlpatterns = [
     
     
     path('search/users/', views.UserSearchView.as_view(), name='user-search'),
-    path('feed/', views.NewsFeedView.as_view(), name='news-feed'),
+    path('api/feed/', views.NewsFeedView.as_view(), name='news-feed'),
 ]

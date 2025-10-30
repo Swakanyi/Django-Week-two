@@ -2,13 +2,14 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Q
-from django.contrib.auth import login, logout
+from django.contrib.auth import login 
+from django.contrib.auth import logout as auth_logout
 from .models import User, UserProfile, Post, Comment, Like, Follow
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
     PostSerializer, CommentSerializer, LikeSerializer, FollowSerializer
 )
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -150,3 +151,16 @@ class NewsFeedView(generics.ListAPIView):
 
 def home(request):
     return render(request, 'home.html')
+
+def register_page(request):
+    return render(request, 'register.html')
+
+def login_page(request):
+    return render(request, 'login.html')
+
+def feed_page(request):
+    return render(request, 'feed.html')
+
+def logout(request):
+    auth_logout(request)
+    return redirect('home')

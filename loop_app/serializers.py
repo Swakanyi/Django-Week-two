@@ -19,13 +19,31 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
+# Add this new serializer for User objects in posts/comments
+class UserSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'profile_picture', 'bio', 'website', 'location']
+
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
+    profile_picture = serializers.ImageField(source='user.profile_picture', read_only=True)
+    bio = serializers.CharField(source='user.bio', read_only=True)
+    website = serializers.URLField(source='user.website', read_only=True)
+    location = serializers.CharField(source='user.location', read_only=True)
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
     
     class Meta:
         model = UserProfile
-        fields = ['id', 'username', 'email', 'profile_picture', 'bio', 'website', 'location', 'created_at']
+        fields = ['id', 'username', 'email', 'profile_picture', 'bio', 'website', 'location', 'followers_count', 'following_count', 'created_at']
+    
+    def get_followers_count(self, obj):
+        return obj.followers.count()
+    
+    def get_following_count(self, obj):
+        return obj.user.following.count()
 
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -50,7 +68,7 @@ class UserLoginSerializer(serializers.Serializer):
         return data
 
 class CommentSerializer(serializers.ModelSerializer):
-    user = UserProfileSerializer(read_only=True)
+    user = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
     
     class Meta:
         model = Comment
@@ -58,7 +76,7 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at']
 
 class PostSerializer(serializers.ModelSerializer):
-    user = UserProfileSerializer(read_only=True)
+    user = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
     comments = CommentSerializer(many=True, read_only=True)
     likes_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
@@ -75,7 +93,7 @@ class PostSerializer(serializers.ModelSerializer):
         return obj.comments.count()
 
 class LikeSerializer(serializers.ModelSerializer):
-    user = UserProfileSerializer(read_only=True)
+    user = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
     
     class Meta:
         model = Like
@@ -83,8 +101,8 @@ class LikeSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at']
 
 class FollowSerializer(serializers.ModelSerializer):
-    follower = UserProfileSerializer(read_only=True)
-    following = UserProfileSerializer(read_only=True)
+    follower = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
+    following = UserSimpleSerializer(read_only=True)  # Changed to UserSimpleSerializer
     
     class Meta:
         model = Follow

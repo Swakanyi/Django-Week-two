@@ -1,16 +1,14 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Loop</title>
-</head>
-<body>
-    <h1>Welcome to Loop!</h1>
-    <nav>
-        <a href="/login/">Login</a> |
-        <a href="/auth/register/">Register</a> |
-        <a href="/posts/">Browse Posts</a> |
-        <a href="/feed/">News Feed</a>
-    </nav>
-    <p>This is our homepage</p>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="text-center">
+  <h1>Welcome to Loop</h1>
+  <p>A simple social platform built with Django REST Framework.</p>
+  {% if not user.is_authenticated %}
+    <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+    <a href="{% url 'register' %}" class="btn btn-outline-secondary">Register</a>
+  {% else %}
+    <a href="{% url 'feed' %}" class="btn btn-success">Go to Feed</a>
+  {% endif %}
+</div>
+{% endblock %}
